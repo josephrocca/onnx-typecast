@@ -24,7 +24,7 @@ def convert_params_to_float(params_dict):
     for param in params_dict:
         data = params_dict[param]
         if data.data_type == TensorProto.FLOAT16:
-            data_cvt = nph.to_array(data).astype(np.float)
+            data_cvt = nph.to_array(data).astype(np.float32)
             data = nph.from_array(data_cvt, data.name)
         converted_params += [data]
     return converted_params
@@ -47,7 +47,7 @@ def convert_constant_nodes_to_float(nodes):
             node.op_type == "Constant"
             and node.attribute[0].t.data_type == TensorProto.FLOAT16
         ):
-            data = nph.to_array(node.attribute[0].t).astype(np.float)
+            data = nph.to_array(node.attribute[0].t).astype(np.float32)
             new_t = nph.from_array(data)
             new_node = h.make_node(
                 "Constant",
@@ -61,7 +61,6 @@ def convert_constant_nodes_to_float(nodes):
             new_nodes += [node]
 
     return new_nodes
-
 
 def convert_model_to_float(model_path: str, out_path: str):
     """
@@ -88,6 +87,27 @@ def convert_model_to_float(model_path: str, out_path: str):
     converted_params = convert_params_to_float(params_dict)
     log.info("Converting constant FLOAT16 nodes to FLOAT...")
     new_nodes = convert_constant_nodes_to_float(graph.node)
+
+    # convert input and output to FLOAT:
+    input_type = graph.input[0].type.tensor_type.elem_type
+    output_type = graph.output[0].type.tensor_type.elem_type
+    if input_type == TensorProto.FLOAT16:
+      graph.input[0].type.tensor_type.elem_type = TensorProto.FLOAT
+    if output_type == TensorProto.FLOAT16:
+      graph.output[0].type.tensor_type.elem_type = TensorProto.FLOAT
+
+    # convert node attributes to FLOAT:
+    for node in new_nodes:
+      for attribute in node.attribute:
+        if attribute.name == "to" and attribute.i == TensorProto.FLOAT16:  # for op_type=="Cast"
+          attribute.i = TensorProto.FLOAT
+        
+        if hasattr(attribute, "type"):
+          if attribute.type == TensorProto.FLOAT16:
+            attribute.type = TensorProto.FLOAT
+          elif attribute.type == 4: # TENSOR
+            if attribute.t.data_type == TensorProto.FLOAT16:
+              attribute.t.CopyFrom( nph.from_array( nph.to_array(attribute.t).astype(np.float32) ) )
 
     graph_name = f"{graph.name}-float"
     log.info("Creating new graph...")
