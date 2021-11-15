@@ -99,19 +99,14 @@ def convert_model_to_int32(model_path: str, out_path: str):
 
     # convert node attributes to INT32:
     for node in new_nodes:
-      # if node.name == "Transpose_3": print(node)
       for index, attribute in enumerate(node.attribute):
         if attribute.name == "to" and attribute.i == TensorProto.INT64:  # for op_type=="Cast"
           attribute.i = TensorProto.INT32
 
         if hasattr(attribute, "type"):
-          if attribute.type == AttributeProto.INTS:
-            # if node.name == "Transpose_3": print(type(attribute.ints[0]))
-            
-          elif attribute.type == AttributeProto.TENSOR:
+          if attribute.type == AttributeProto.TENSOR:
             if attribute.t.data_type == TensorProto.INT64:
               attribute.t.CopyFrom( nph.from_array( nph.to_array(attribute.t).astype(np.int32) ) )
-      # if node.name == "Transpose_3": print(node, node.attribute[0].type)
 
     graph_name = f"{graph.name}-int32"
     log.info("Creating new graph...")
