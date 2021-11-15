@@ -2,7 +2,7 @@ import onnx
 
 from onnx import helper as h
 from onnx import checker as ch
-from onnx import TensorProto, GraphProto
+from onnx import TensorProto, GraphProto, AttributeProto
 from onnx import numpy_helper as nph
 
 import numpy as np
@@ -88,6 +88,30 @@ def convert_model_to_int32(model_path: str, out_path: str):
     converted_params = convert_params_to_int32(params_dict)
     log.info("Converting constant INT64 nodes to INT32...")
     new_nodes = convert_constant_nodes_to_int32(graph.node)
+
+    # convert input and output to INT32:
+    input_type = graph.input[0].type.tensor_type.elem_type
+    output_type = graph.output[0].type.tensor_type.elem_type
+    if input_type == TensorProto.INT64:
+      graph.input[0].type.tensor_type.elem_type = TensorProto.INT32
+    if output_type == TensorProto.INT64:
+      graph.output[0].type.tensor_type.elem_type = TensorProto.INT32
+
+    # convert node attributes to INT32:
+    for node in new_nodes:
+      # if node.name == "Transpose_3": print(node)
+      for index, attribute in enumerate(node.attribute):
+        if attribute.name == "to" and attribute.i == TensorProto.INT64:  # for op_type=="Cast"
+          attribute.i = TensorProto.INT32
+
+        if hasattr(attribute, "type"):
+          if attribute.type == AttributeProto.INTS:
+            # if node.name == "Transpose_3": print(type(attribute.ints[0]))
+            
+          elif attribute.type == AttributeProto.TENSOR:
+            if attribute.t.data_type == TensorProto.INT64:
+              attribute.t.CopyFrom( nph.from_array( nph.to_array(attribute.t).astype(np.int32) ) )
+      # if node.name == "Transpose_3": print(node, node.attribute[0].type)
 
     graph_name = f"{graph.name}-int32"
     log.info("Creating new graph...")
