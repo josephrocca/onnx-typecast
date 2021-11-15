@@ -2,7 +2,7 @@ import onnx
 
 from onnx import helper as h
 from onnx import checker as ch
-from onnx import TensorProto, GraphProto
+from onnx import TensorProto, GraphProto, AttributeProto
 from onnx import numpy_helper as nph
 
 import numpy as np
@@ -100,12 +100,12 @@ def convert_model_to_float(model_path: str, out_path: str):
     for node in new_nodes:
       for attribute in node.attribute:
         if attribute.name == "to" and attribute.i == TensorProto.FLOAT16:  # for op_type=="Cast"
-          attribute.i = TensorProto.FLOAT
+          attribute.i = AttributeProto.FLOAT
         
         if hasattr(attribute, "type"):
           if attribute.type == TensorProto.FLOAT16:
             attribute.type = TensorProto.FLOAT
-          elif attribute.type == 4: # TENSOR
+          elif attribute.type == AttributeProto.TENSOR:
             if attribute.t.data_type == TensorProto.FLOAT16:
               attribute.t.CopyFrom( nph.from_array( nph.to_array(attribute.t).astype(np.float32) ) )
 
