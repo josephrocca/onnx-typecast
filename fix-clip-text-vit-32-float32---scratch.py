@@ -4,6 +4,16 @@
 # actually be doing anything here anyway) as a way to begin debugging, but then upon testing the output model it actually
 # worked fine. So I'm guessing it has something to do with the way onnx adjusts the model when it "re-packages" it. I really
 # have no idea though...
+# To use this, just open a notebook/Colab and paste these lines:
+
+#   !git clone https://github.com/josephrocca/onnx-typecast
+#   %cd onnx-typecast
+#   !pip install -r requirements.txt
+#   !python3 ./fix-clip-text-vit-32-float32---scratch.py ./clip-text-vit-32-float32.onnx ./clip-text-vit-32-float32-int32.onnx
+
+# Where the `clip-text-vit-32-float32.onnx` file is the file that you get from:
+#   1. Exporting CLIP PyTorch model to ONNX using this: https://colab.research.google.com/github/josephrocca/openai-clip-js/blob/main/Export_CLIP_to_ONNX_tflite_tfjs_tf_saved_model.ipynb
+#   2. Then putting the output (clip-text-vit-32.onnx) through this: https://colab.research.google.com/github/josephrocca/openai-clip-js/blob/main/ONNX_float16_to_float32.ipynb
 
 import onnx
 
